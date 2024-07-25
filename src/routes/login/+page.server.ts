@@ -14,47 +14,28 @@ export const actions: Actions = {
 
     if (authError) {
       if (authError instanceof AuthApiError && authError.status === 400) {
-        return fail(400, {
-          error: "Invalid credentials",
-        });
+        return fail(400, { error: "Invalid credentials" });
       }
-      return fail(500, {
-        message: "Server error. Try again later.",
-      });
+      return fail(500, { message: "Server error. Try again later." });
     }
 
     // Fetch the user's profile with role
     const { data: profileData, error: profileError } = await locals.sb
       .from('profiles')
-      .select('role')
+      .select('id, role')
       .eq('id', authData.user?.id)
       .single();
 
     if (profileError) {
-      if (profileError.code === 'PGRST116') {
-        // No profile found for the user
-        console.error('No profile found for user:', authData.user?.id);
-        return fail(500, {
-          message: "No profile found for user. Please contact support.",
-        });
-      } else {
-        console.error('Error fetching profile:', profileError);
-        return fail(500, {
-          message: "Failed to fetch user profile. Try again later.",
-        });
-      }
+      console.error('Error fetching profile:', profileError);
+      return fail(500, { message: "Failed to fetch user profile. Try again later." });
     }
 
-    // Combine auth data and profile data
-    const userData = {
-      ...authData.user,
+    // Store user data in locals
+    locals.user = {
+      id: profileData.id,
       role: profileData.role
     };
-
-    console.log(userData);
-
-    // Store user data in locals or session as needed
-    locals.user = userData;
 
     throw redirect(303, "/");
   },
